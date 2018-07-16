@@ -44,6 +44,30 @@ macro_rules! log {
     ($lvl:expr, $($arg:tt)+) => (log!(target: module_path!(), $lvl, $($arg)+))
 }
 
+/// Logs a message at the output level.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[macro_use]
+/// # extern crate log;
+/// # fn main() {
+/// let (err_info, port) = ("No connection", 22);
+///
+/// output!("Error: {} on port {}", err_info, port);
+/// output!(target: "app_events", "App Error: {}, Port: {}", err_info, 22);
+/// # }
+/// ```
+#[macro_export]
+macro_rules! output {
+    (target: $target:expr, $($arg:tt)*) => (
+        log!(target: $target, $crate::Level::Output, $($arg)*);
+    );
+    ($($arg:tt)*) => (
+        log!($crate::Level::Output, $($arg)*);
+    )
+}
+
 /// Logs a message at the error level.
 ///
 /// # Examples
@@ -190,7 +214,7 @@ macro_rules! trace {
 #[macro_export]
 macro_rules! detail {
     (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::Level::Trace, $($arg)*);
+        log!(target: $target, $crate::Level::Detail, $($arg)*);
     );
     ($($arg:tt)*) => (
         log!($crate::Level::Detail, $($arg)*);
@@ -217,7 +241,7 @@ macro_rules! detail {
 #[macro_export]
 macro_rules! shell {
     (target: $target:expr, $($arg:tt)*) => (
-        log!(target: $target, $crate::Level::Trace, $($arg)*);
+        log!(target: $target, $crate::Level::Shell, $($arg)*);
     );
     ($($arg:tt)*) => (
         log!($crate::Level::Shell, $($arg)*);
