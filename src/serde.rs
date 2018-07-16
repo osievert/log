@@ -18,11 +18,14 @@ impl Serialize for Level {
         S: Serializer,
     {
         match *self {
-            Level::Error => serializer.serialize_unit_variant("Level", 0, "ERROR"),
-            Level::Warn => serializer.serialize_unit_variant("Level", 1, "WARN"),
-            Level::Info => serializer.serialize_unit_variant("Level", 2, "INFO"),
-            Level::Debug => serializer.serialize_unit_variant("Level", 3, "DEBUG"),
-            Level::Trace => serializer.serialize_unit_variant("Level", 4, "TRACE"),
+            Level::Output => serializer.serialize_unit_variant("Level", 1, "OUTPUT"),
+            Level::Error => serializer.serialize_unit_variant("Level", 2, "ERROR"),
+            Level::Warn => serializer.serialize_unit_variant("Level", 3, "WARN"),
+            Level::Info => serializer.serialize_unit_variant("Level", 4, "INFO"),
+            Level::Debug => serializer.serialize_unit_variant("Level", 5, "DEBUG"),
+            Level::Trace => serializer.serialize_unit_variant("Level", 6, "TRACE"),
+            Level::Detail => serializer.serialize_unit_variant("Level", 7, "DETAIL"),
+            Level::Shell => serializer.serialize_unit_variant("Level", 8, "SHELL"),
         }
     }
 }
@@ -102,11 +105,14 @@ impl Serialize for LevelFilter {
     {
         match *self {
             LevelFilter::Off => serializer.serialize_unit_variant("LevelFilter", 0, "OFF"),
-            LevelFilter::Error => serializer.serialize_unit_variant("LevelFilter", 1, "ERROR"),
-            LevelFilter::Warn => serializer.serialize_unit_variant("LevelFilter", 2, "WARN"),
-            LevelFilter::Info => serializer.serialize_unit_variant("LevelFilter", 3, "INFO"),
-            LevelFilter::Debug => serializer.serialize_unit_variant("LevelFilter", 4, "DEBUG"),
-            LevelFilter::Trace => serializer.serialize_unit_variant("LevelFilter", 5, "TRACE"),
+            LevelFilter::Output => serializer.serialize_unit_variant("LevelFilter", 1, "ERROR"),
+            LevelFilter::Error => serializer.serialize_unit_variant("LevelFilter", 2, "ERROR"),
+            LevelFilter::Warn => serializer.serialize_unit_variant("LevelFilter", 3, "WARN"),
+            LevelFilter::Info => serializer.serialize_unit_variant("LevelFilter", 4, "INFO"),
+            LevelFilter::Debug => serializer.serialize_unit_variant("LevelFilter", 5, "DEBUG"),
+            LevelFilter::Trace => serializer.serialize_unit_variant("LevelFilter", 6, "TRACE"),
+            LevelFilter::Detail => serializer.serialize_unit_variant("LevelFilter", 7, "DETAIL"),
+            LevelFilter::Shell => serializer.serialize_unit_variant("LevelFilter", 8, "SHELL"),
         }
     }
 }
@@ -221,11 +227,14 @@ mod tests {
     #[test]
     fn test_level_ser_de() {
         let cases = [
+            (Level::Output, [level_token("OUTPUT")]),
             (Level::Error, [level_token("ERROR")]),
             (Level::Warn, [level_token("WARN")]),
             (Level::Info, [level_token("INFO")]),
             (Level::Debug, [level_token("DEBUG")]),
             (Level::Trace, [level_token("TRACE")]),
+            (Level::Detail, [level_token("DETAIL")]),
+            (Level::Shell, [level_token("SHELL")]),
         ];
 
         for &(s, expected) in &cases {
@@ -236,11 +245,14 @@ mod tests {
     #[test]
     fn test_level_case_insensitive() {
         let cases = [
+            (Level::Output, [level_token("output")]),
             (Level::Error, [level_token("error")]),
             (Level::Warn, [level_token("warn")]),
             (Level::Info, [level_token("info")]),
             (Level::Debug, [level_token("debug")]),
             (Level::Trace, [level_token("trace")]),
+            (Level::Detail, [level_token("detail")]),
+            (Level::Shell, [level_token("shell")]),
         ];
 
         for &(s, expected) in &cases {
@@ -251,11 +263,14 @@ mod tests {
     #[test]
     fn test_level_de_bytes() {
         let cases = [
+            (Level::Output, level_bytes_tokens(b"OUTPUT")),
             (Level::Error, level_bytes_tokens(b"ERROR")),
             (Level::Warn, level_bytes_tokens(b"WARN")),
             (Level::Info, level_bytes_tokens(b"INFO")),
             (Level::Debug, level_bytes_tokens(b"DEBUG")),
             (Level::Trace, level_bytes_tokens(b"TRACE")),
+            (Level::Detail, level_bytes_tokens(b"DETAIL")),
+            (Level::Shell, level_bytes_tokens(b"SHELL")),
         ];
 
         for &(value, tokens) in &cases {
@@ -266,7 +281,7 @@ mod tests {
     #[test]
     fn test_level_de_error() {
         let msg = "unknown variant `errorx`, expected one of \
-                   `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`";
+                   `OUTPUT`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`, `DETAIL`, `SHELL`";
         assert_de_tokens_error::<Level>(&[level_token("errorx")], msg);
     }
 
@@ -274,11 +289,14 @@ mod tests {
     fn test_level_filter_ser_de() {
         let cases = [
             (LevelFilter::Off, [level_filter_token("OFF")]),
+            (LevelFilter::Output, [level_filter_token("OUTPUT")]),
             (LevelFilter::Error, [level_filter_token("ERROR")]),
             (LevelFilter::Warn, [level_filter_token("WARN")]),
             (LevelFilter::Info, [level_filter_token("INFO")]),
             (LevelFilter::Debug, [level_filter_token("DEBUG")]),
             (LevelFilter::Trace, [level_filter_token("TRACE")]),
+            (LevelFilter::Detail, [level_filter_token("DETAIL")]),
+            (LevelFilter::Shell, [level_filter_token("SHELL")]),
         ];
 
         for &(s, expected) in &cases {
@@ -290,11 +308,14 @@ mod tests {
     fn test_level_filter_case_insensitive() {
         let cases = [
             (LevelFilter::Off, [level_filter_token("off")]),
+            (LevelFilter::Output, [level_filter_token("output")]),
             (LevelFilter::Error, [level_filter_token("error")]),
             (LevelFilter::Warn, [level_filter_token("warn")]),
             (LevelFilter::Info, [level_filter_token("info")]),
             (LevelFilter::Debug, [level_filter_token("debug")]),
             (LevelFilter::Trace, [level_filter_token("trace")]),
+            (LevelFilter::Detail, [level_filter_token("detail")]),
+            (LevelFilter::Shell, [level_filter_token("shell")]),
         ];
 
         for &(s, expected) in &cases {
@@ -306,11 +327,14 @@ mod tests {
     fn test_level_filter_de_bytes() {
         let cases = [
             (LevelFilter::Off, level_filter_bytes_tokens(b"OFF")),
+            (LevelFilter::Output, level_filter_bytes_tokens(b"OUTPUT")),
             (LevelFilter::Error, level_filter_bytes_tokens(b"ERROR")),
             (LevelFilter::Warn, level_filter_bytes_tokens(b"WARN")),
             (LevelFilter::Info, level_filter_bytes_tokens(b"INFO")),
             (LevelFilter::Debug, level_filter_bytes_tokens(b"DEBUG")),
             (LevelFilter::Trace, level_filter_bytes_tokens(b"TRACE")),
+            (LevelFilter::Detail, level_filter_bytes_tokens(b"DETAIL")),
+            (LevelFilter::Shell, level_filter_bytes_tokens(b"SHELL")),
         ];
 
         for &(value, tokens) in &cases {
