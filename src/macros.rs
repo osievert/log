@@ -168,6 +168,60 @@ macro_rules! trace {
     )
 }
 
+/// Logs a message at the detail level.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[macro_use]
+/// # extern crate log;
+/// # fn main() {
+/// # struct Position { x: f32, y: f32 }
+/// let pos = Position { x: 3.234, y: -1.223 };
+///
+/// detail!("Position is: x: {}, y: {}", pos.x, pos.y);
+/// detail!(target: "app_events", "x is {} and y is {}",
+///        if pos.x >= 0.0 { "positive" } else { "negative" },
+///        if pos.y >= 0.0 { "positive" } else { "negative" });
+/// # }
+/// ```
+#[macro_export]
+macro_rules! detail {
+    (target: $target:expr, $($arg:tt)*) => (
+        log!(target: $target, $crate::Level::Trace, $($arg)*);
+    );
+    ($($arg:tt)*) => (
+        log!($crate::Level::Detail, $($arg)*);
+    )
+}
+
+/// Logs a message at the shell level.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[macro_use]
+/// # extern crate log;
+/// # fn main() {
+/// # struct Position { x: f32, y: f32 }
+/// let pos = Position { x: 3.234, y: -1.223 };
+///
+/// shell!("Position is: x: {}, y: {}", pos.x, pos.y);
+/// shell!(target: "app_events", "x is {} and y is {}",
+///        if pos.x >= 0.0 { "positive" } else { "negative" },
+///        if pos.y >= 0.0 { "positive" } else { "negative" });
+/// # }
+/// ```
+#[macro_export]
+macro_rules! shell {
+    (target: $target:expr, $($arg:tt)*) => (
+        log!(target: $target, $crate::Level::Trace, $($arg)*);
+    );
+    ($($arg:tt)*) => (
+        log!($crate::Level::Shell, $($arg)*);
+    )
+}
+
 /// Determines if a message logged at the specified level in that module will
 /// be logged.
 ///
