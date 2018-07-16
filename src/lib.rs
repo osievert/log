@@ -39,6 +39,8 @@
 //! [`info!`]: ./macro.info.html
 //! [`debug!`]: ./macro.debug.html
 //! [`trace!`]: ./macro.trace.html
+//! [`detail!`]: ./macro.detail.html
+//! [`shell!`]: ./macro.shell.html
 //! [`println!`]: https://doc.rust-lang.org/stable/std/macro.println.html
 //!
 //! ## In libraries
@@ -211,12 +213,16 @@
 //! * `max_level_info`
 //! * `max_level_debug`
 //! * `max_level_trace`
+//! * `max_level_detail`
+//! * `max_level_shell`
 //! * `release_max_level_off`
 //! * `release_max_level_error`
 //! * `release_max_level_warn`
 //! * `release_max_level_info`
 //! * `release_max_level_debug`
 //! * `release_max_level_trace`
+//! * `release_max_level_detail`
+//! * `release_max_level_shell`
 //!
 //! These features control the value of the `STATIC_MAX_LEVEL` constant. The logging macros check
 //! this value before logging a message. By default, no levels are disabled.
@@ -312,7 +318,7 @@ const INITIALIZED: usize = 2;
 
 static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
-static LOG_LEVEL_NAMES: [&'static str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
+static LOG_LEVEL_NAMES: [&'static str; 8] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "DETAIL", "SHELL"];
 
 static SET_LOGGER_ERROR: &'static str = "attempted to set a logger after the logging system \
                                          was already initialized";
@@ -346,8 +352,16 @@ pub enum Level {
     Debug,
     /// The "trace" level.
     ///
-    /// Designates very low priority, often extremely verbose, information.
+    /// Designates code flow tracing.
     Trace,
+    /// The "detail" level.
+    ///
+    /// Designates extremely low priority, often extremely verbose, information.
+    Detail,
+    /// The "shell" level.
+    ///
+    /// Designates the response from calling external commands.
+    Shell,
 }
 
 impl Clone for Level {
@@ -488,6 +502,8 @@ impl Level {
             3 => Some(Level::Info),
             4 => Some(Level::Debug),
             5 => Some(Level::Trace),
+            6 => Some(Level::Detail),
+            7 => Some(Level::Shell),
             _ => None,
         }
     }
@@ -495,7 +511,7 @@ impl Level {
     /// Returns the most verbose logging level.
     #[inline]
     pub fn max() -> Level {
-        Level::Trace
+        Level::Shell
     }
 
     /// Converts the `Level` to the equivalent `LevelFilter`.
@@ -528,6 +544,10 @@ pub enum LevelFilter {
     Debug,
     /// Corresponds to the `Trace` log level.
     Trace,
+    /// Corresponds to the `Detail` log level.
+    Detail,
+    /// Corresponds to the `Shell` log level.
+    Shell,
 }
 
 // Deriving generates terrible impls of these traits
@@ -642,13 +662,15 @@ impl LevelFilter {
             3 => Some(LevelFilter::Info),
             4 => Some(LevelFilter::Debug),
             5 => Some(LevelFilter::Trace),
+            6 => Some(LevelFilter::Detail),
+            7 => Some(LevelFilter::Shell),
             _ => None,
         }
     }
     /// Returns the most verbose logging level filter.
     #[inline]
     pub fn max() -> LevelFilter {
-        LevelFilter::Trace
+        LevelFilter::Shell
     }
 
     /// Converts `self` to the equivalent `Level`.
@@ -1071,6 +1093,8 @@ pub fn set_max_level(level: LevelFilter) {
 /// [`info!`]: macro.info.html
 /// [`debug!`]: macro.debug.html
 /// [`trace!`]: macro.trace.html
+/// [`detail!`]: macro.detail.html
+/// [`shell!`]: macro.shell.html
 /// [`set_max_level`]: fn.set_max_level.html
 #[inline(always)]
 pub fn max_level() -> LevelFilter {
@@ -1266,6 +1290,10 @@ cfg_if! {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Debug;
     } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_trace"))] {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Trace;
+    } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_detail"))] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Detail;
+    } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_shell"))] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Shell;
     } else if #[cfg(feature = "max_level_off")] {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Off;
     } else if #[cfg(feature = "max_level_error")] {
@@ -1276,8 +1304,14 @@ cfg_if! {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Info;
     } else if #[cfg(feature = "max_level_debug")] {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Debug;
-    } else {
+    } else if #[cfg(feature = "max_level_trace")] {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Trace;
+    } else if #[cfg(feature = "max_level_detail")] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Detail;
+    } else if #[cfg(feature = "max_level_shell")] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Shell;
+    } else {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Shell;
     }
 }
 
@@ -1296,12 +1330,16 @@ mod tests {
             ("info", Ok(LevelFilter::Info)),
             ("debug", Ok(LevelFilter::Debug)),
             ("trace", Ok(LevelFilter::Trace)),
+            ("detail", Ok(LevelFilter::Detail)),
+            ("shell", Ok(LevelFilter::Shell)),
             ("OFF", Ok(LevelFilter::Off)),
             ("ERROR", Ok(LevelFilter::Error)),
             ("WARN", Ok(LevelFilter::Warn)),
             ("INFO", Ok(LevelFilter::Info)),
             ("DEBUG", Ok(LevelFilter::Debug)),
             ("TRACE", Ok(LevelFilter::Trace)),
+            ("DETAIL", Ok(LevelFilter::Detail)),
+            ("SHELL", Ok(LevelFilter::Shell)),
             ("asdf", Err(ParseLevelError(()))),
         ];
         for &(s, ref expected) in &tests {
@@ -1318,11 +1356,15 @@ mod tests {
             ("info", Ok(Level::Info)),
             ("debug", Ok(Level::Debug)),
             ("trace", Ok(Level::Trace)),
+            ("detail", Ok(Level::Detail)),
+            ("shell", Ok(Level::Shell)),
             ("ERROR", Ok(Level::Error)),
             ("WARN", Ok(Level::Warn)),
             ("INFO", Ok(Level::Info)),
             ("DEBUG", Ok(Level::Debug)),
             ("TRACE", Ok(Level::Trace)),
+            ("DETAIL", Ok(Level::Detail)),
+            ("SHELL", Ok(Level::Shell)),
             ("asdf", Err(ParseLevelError(()))),
         ];
         for &(s, ref expected) in &tests {
