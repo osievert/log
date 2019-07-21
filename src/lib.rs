@@ -327,7 +327,7 @@ const INITIALIZED: usize = 2;
 #[allow(deprecated)]
 static MAX_LOG_LEVEL_FILTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
-static LOG_LEVEL_NAMES: [&'static str; 9] = ["OFF", "OUTPUT", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "DETAIL", "SHELL"];
+static LOG_LEVEL_NAMES: [&'static str; 9] = ["OFF", "ERROR", "WARN", "OUTPUT", "INFO", "DEBUG", "TRACE", "DETAIL", "SHELL"];
 
 static SET_LOGGER_ERROR: &'static str = "attempted to set a logger after the logging system \
                                          was already initialized";
@@ -343,10 +343,10 @@ static LEVEL_PARSE_ERROR: &'static str =
 #[repr(usize)]
 #[derive(Copy, Eq, Debug, Hash)]
 pub enum Level {
-    /// The "output" level.
+    /// The "None" level.
     ///
-    /// Designates normal program output.
-    Output = 1, // This way these line up with the discriminants for LevelFilter below
+    /// No level / no-op
+    None = 0, // This way these line up with the discriminants for LevelFilter below
     /// The "error" level.
     ///
     /// Designates very serious errors.
@@ -355,6 +355,10 @@ pub enum Level {
     ///
     /// Designates hazardous situations.
     Warn,
+    /// The "output" level.
+    ///
+    /// Designates normal program output.
+    Output,
     /// The "info" level.
     ///
     /// Designates useful information.
@@ -510,9 +514,10 @@ impl fmt::Display for Level {
 impl Level {
     fn from_usize(u: usize) -> Option<Level> {
         match u {
-            1 => Some(Level::Output),
-            2 => Some(Level::Error),
-            3 => Some(Level::Warn),
+            0 => Some(Level::None),
+            1 => Some(Level::Error),
+            2 => Some(Level::Warn),
+            3 => Some(Level::Output),
             4 => Some(Level::Info),
             5 => Some(Level::Debug),
             6 => Some(Level::Trace),
@@ -548,12 +553,12 @@ impl Level {
 pub enum LevelFilter {
     /// A level lower than all log levels.
     Off,
-    /// Corresponds to the `Output` log level.
-    Output,
     /// Corresponds to the `Error` log level.
     Error,
     /// Corresponds to the `Warn` log level.
     Warn,
+    /// Corresponds to the `Output` log level.
+    Output,
     /// Corresponds to the `Info` log level.
     Info,
     /// Corresponds to the `Debug` log level.
@@ -673,9 +678,9 @@ impl LevelFilter {
     fn from_usize(u: usize) -> Option<LevelFilter> {
         match u {
             0 => Some(LevelFilter::Off),
-            1 => Some(LevelFilter::Output),
-            2 => Some(LevelFilter::Error),
-            3 => Some(LevelFilter::Warn),
+            1 => Some(LevelFilter::Error),
+            2 => Some(LevelFilter::Warn),
+            3 => Some(LevelFilter::Output),
             4 => Some(LevelFilter::Info),
             5 => Some(LevelFilter::Debug),
             6 => Some(LevelFilter::Trace),
@@ -1422,12 +1427,12 @@ pub const STATIC_MAX_LEVEL: LevelFilter = MAX_LEVEL_INNER;
 cfg_if! {
     if #[cfg(all(not(debug_assertions), feature = "release_max_level_off"))] {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Off;
-    } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_output"))] {
-        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Output;
     } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_error"))] {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Error;
     } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_warn"))] {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Warn;
+    } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_output"))] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Output;
     } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_info"))] {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Info;
     } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_debug"))] {
@@ -1440,12 +1445,12 @@ cfg_if! {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Shell;
     } else if #[cfg(feature = "max_level_off")] {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Off;
-    } else if #[cfg(feature = "max_level_output")] {
-        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Output;
     } else if #[cfg(feature = "max_level_error")] {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Error;
     } else if #[cfg(feature = "max_level_warn")] {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Warn;
+    } else if #[cfg(feature = "max_level_output")] {
+        const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Output;
     } else if #[cfg(feature = "max_level_info")] {
         const MAX_LEVEL_INNER: LevelFilter = LevelFilter::Info;
     } else if #[cfg(feature = "max_level_debug")] {
@@ -1471,18 +1476,18 @@ mod tests {
     fn test_levelfilter_from_str() {
         let tests = [
             ("off", Ok(LevelFilter::Off)),
-            ("output", Ok(LevelFilter::Output)),
             ("error", Ok(LevelFilter::Error)),
             ("warn", Ok(LevelFilter::Warn)),
+            ("output", Ok(LevelFilter::Output)),
             ("info", Ok(LevelFilter::Info)),
             ("debug", Ok(LevelFilter::Debug)),
             ("trace", Ok(LevelFilter::Trace)),
             ("detail", Ok(LevelFilter::Detail)),
             ("shell", Ok(LevelFilter::Shell)),
             ("OFF", Ok(LevelFilter::Off)),
-            ("OUTPUT", Ok(LevelFilter::Output)),
             ("ERROR", Ok(LevelFilter::Error)),
             ("WARN", Ok(LevelFilter::Warn)),
+            ("OUTPUT", Ok(LevelFilter::Output)),
             ("INFO", Ok(LevelFilter::Info)),
             ("DEBUG", Ok(LevelFilter::Debug)),
             ("TRACE", Ok(LevelFilter::Trace)),
@@ -1499,17 +1504,17 @@ mod tests {
     fn test_level_from_str() {
         let tests = [
             ("OFF", Err(ParseLevelError(()))),
-            ("output", Ok(Level::Output)),
             ("error", Ok(Level::Error)),
             ("warn", Ok(Level::Warn)),
+            ("output", Ok(Level::Output)),
             ("info", Ok(Level::Info)),
             ("debug", Ok(Level::Debug)),
             ("trace", Ok(Level::Trace)),
             ("detail", Ok(Level::Detail)),
             ("shell", Ok(Level::Shell)),
-            ("OUTPUT", Ok(Level::Output)),
             ("ERROR", Ok(Level::Error)),
             ("WARN", Ok(Level::Warn)),
+            ("OUTPUT", Ok(Level::Output)),
             ("INFO", Ok(Level::Info)),
             ("DEBUG", Ok(Level::Debug)),
             ("TRACE", Ok(Level::Trace)),
@@ -1551,7 +1556,7 @@ mod tests {
     #[test]
     fn test_to_level() {
         assert_eq!(Some(Level::Error), LevelFilter::Error.to_level());
-        assert_eq!(None, LevelFilter::Off.to_level());
+        assert_eq!(Some(Level::None), LevelFilter::Off.to_level());
         assert_eq!(Some(Level::Debug), LevelFilter::Debug.to_level());
     }
 
